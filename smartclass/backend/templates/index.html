@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Smart Timetable Scheduler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/CSS/style.css">
+</head>
+<body>
+<div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2>Scheduler</h2>
+            <span>ML-Powered Timetable</span>
+        </div>
+        <ul class="sidebar-nav">
+            <li class="sidebar-section">Main</li>
+            <li><a href="#" class="active" onclick="return showSection(event, 'overview')"><span class="icon">&#9632;</span> Dashboard</a></li>
+            <li><a href="#" onclick="return showSection(event, 'generate')"><span class="icon">&#9881;</span> Generate Timetable</a></li>
+            <li><a href="#" onclick="return showSection(event, 'view-tt')"><span class="icon">&#128197;</span> View Timetable</a></li>
+
+            <li class="sidebar-section">Data Management</li>
+            <li><a href="#" onclick="return showSection(event, 'departments')"><span class="icon">&#127963;</span> Departments</a></li>
+            <li><a href="#" onclick="return showSection(event, 'courses')"><span class="icon">&#128218;</span> Courses</a></li>
+            <li><a href="#" onclick="return showSection(event, 'subjects')"><span class="icon">&#128209;</span> Subjects</a></li>
+            <li><a href="#" onclick="return showSection(event, 'faculty-mgmt')"><span class="icon">&#128100;</span> Faculty</a></li>
+            <li><a href="#" onclick="return showSection(event, 'classrooms')"><span class="icon">&#127970;</span> Classrooms</a></li>
+
+            <li class="sidebar-section">Operations</li>
+            <li><a href="#" onclick="return showSection(event, 'notifications')"><span class="icon">&#128276;</span> Notifications <span id="admin-notif-badge" class="notif-badge" style="display:none;">0</span></a></li>
+            <li><a href="#" onclick="return showSection(event, 'swap-req')"><span class="icon">&#128260;</span> Swap Requests</a></li>
+            <li><a href="#" onclick="return showSection(event, 'analytics')"><span class="icon">&#128200;</span> Analytics</a></li>
+        </ul>
+        <div style="padding:1.5rem; margin-top:auto; border-top:1px solid rgba(255,255,255,0.08);">
+            <button class="btn btn-secondary btn-full btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="alert-area"></div>
+
+        <!-- ═══ OVERVIEW ═══ -->
+        <section id="sec-overview" class="section active">
+            <div class="top-bar">
+                <h1>Dashboard Overview</h1>
+                <div class="user-badge">Admin Panel</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">&#127963;</div>
+                    <div class="stat-value" id="stat-departments">0</div>
+                    <div class="stat-label">Departments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">&#128218;</div>
+                    <div class="stat-value" id="stat-courses">0</div>
+                    <div class="stat-label">Courses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">&#128209;</div>
+                    <div class="stat-value" id="stat-subjects">0</div>
+                    <div class="stat-label">Subjects</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">&#128100;</div>
+                    <div class="stat-value" id="stat-faculty">0</div>
+                    <div class="stat-label">Faculty Members</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink">&#127970;</div>
+                    <div class="stat-value" id="stat-classrooms">0</div>
+                    <div class="stat-label">Classrooms</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon cyan">&#128197;</div>
+                    <div class="stat-value" id="stat-entries">0</div>
+                    <div class="stat-label">Scheduled Classes</div>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                <div class="panel">
+                    <div class="panel-header"><h3>Faculty Workload</h3></div>
+                    <div class="panel-body">
+                        <table class="data-table">
+                            <thead><tr><th>Faculty</th><th>Hours</th><th>Days</th><th>Load</th></tr></thead>
+                            <tbody id="workload-body"><tr><td colspan="4" class="text-center text-muted">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3>Room Utilization</h3></div>
+                    <div class="panel-body">
+                        <table class="data-table">
+                            <thead><tr><th>Room</th><th>Type</th><th>Capacity</th><th>Slots</th><th>Usage</th></tr></thead>
+                            <tbody id="room-util-body"><tr><td colspan="5" class="text-center text-muted">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="sec-notifications" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Notifications</h1>
+                <div class="notification-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="loadAdminNotifications()">Refresh</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllSwapRequests()">Clear Swap Request List</button>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-body" id="admin-notif-list">
+                    <div class="empty-state">
+                        <div class="icon">&#128276;</div>
+                        <p>No new swap request notifications.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ GENERATE ═══ -->
+        <section id="sec-generate" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Generate Timetable</h1>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header"><h3>ML Pipeline Configuration</h3></div>
+                <div class="panel-body">
+                    <div class="gen-config">
+                        <div class="form-group">
+                            <label><input type="checkbox" id="cfg-ml" checked> Use ML Optimization</label>
+                        </div>
+                        <div class="form-group">
+                            <label>GA Generations</label>
+                            <input type="number" id="cfg-gens" value="80" min="10" max="500">
+                        </div>
+                        <div class="form-group">
+                            <label>GA Population Size</label>
+                            <input type="number" id="cfg-pop" value="25" min="10" max="100">
+                        </div>
+                    </div>
+                    <button id="btn-generate" class="btn btn-primary" onclick="generateTimetable()">
+                        Generate Timetable
+                    </button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header"><h3>Pipeline Progress</h3></div>
+                <div class="panel-body">
+                    <div id="pipeline-steps" class="pipeline-steps">
+                        <p class="text-muted">Click "Generate Timetable" to start the ML pipeline.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gen-result"></div>
+        </section>
+
+        <!-- ═══ VIEW TIMETABLE ═══ -->
+        <section id="sec-view-tt" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>View Timetable</h1>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Filter</h3>
+                    <button class="btn btn-primary btn-sm" onclick="viewFilteredTimetable()">Apply</button>
+                </div>
+                <div class="panel-body" style="display:flex; gap:1rem;">
+                    <div class="form-group" style="flex:1;">
+                        <label>Semester</label>
+                        <select id="filter-semester" class="semester-select"></select>
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>Faculty</label>
+                        <select id="filter-faculty" class="faculty-select"></select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-body" id="timetable-display">
+                    <div class="empty-state">
+                        <div class="icon">&#128197;</div>
+                        <p>Select filters and click Apply to view the timetable.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ DEPARTMENTS ═══ -->
+        <section id="sec-departments" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Departments</h1>
+                <button class="btn btn-primary" onclick="openModal('modal-dept')">+ Add Department</button>
+            </div>
+            <div class="panel">
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Code</th><th>HOD</th><th>Actions</th></tr></thead>
+                        <tbody id="dept-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ COURSES ═══ -->
+        <section id="sec-courses" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Courses</h1>
+                <button class="btn btn-primary" onclick="openModal('modal-course')">+ Add Course</button>
+            </div>
+            <div class="panel">
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Code</th><th>Department</th><th>Semesters</th></tr></thead>
+                        <tbody id="course-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ SUBJECTS ═══ -->
+        <section id="sec-subjects" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Subjects</h1>
+                <button class="btn btn-primary" onclick="openModal('modal-subject')">+ Add Subject</button>
+            </div>
+            <div class="panel">
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Code</th><th>Course/Sem</th><th>Lectures/Week</th><th>Type</th><th>Priority</th></tr></thead>
+                        <tbody id="subject-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ FACULTY ═══ -->
+        <section id="sec-faculty-mgmt" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Faculty Management</h1>
+                <button class="btn btn-primary" onclick="openModal('modal-faculty')">+ Add Faculty</button>
+            </div>
+            <div class="panel">
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Designation</th><th>Max Hours</th></tr></thead>
+                        <tbody id="faculty-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ CLASSROOMS ═══ -->
+        <section id="sec-classrooms" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Classrooms</h1>
+                <button class="btn btn-primary" onclick="openModal('modal-classroom')">+ Add Classroom</button>
+            </div>
+            <div class="panel">
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Name</th><th>Building</th><th>Capacity</th><th>Type</th><th>Projector</th><th>AC</th></tr></thead>
+                        <tbody id="classroom-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ SWAP REQUESTS ═══ -->
+        <section id="sec-swap-req" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Swap Requests</h1>
+                <div class="notification-actions">
+                    <button class="btn btn-secondary btn-sm" onclick="loadSwapRequests()">Refresh</button>
+                    <button class="btn btn-danger btn-sm" onclick="clearAllSwapRequests()">Clear Swap Request List</button>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Faculty</th><th>Subject</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody id="swap-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ═══ ANALYTICS ═══ -->
+        <section id="sec-analytics" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Analytics & Reports</h1>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
+                <div class="panel">
+                    <div class="panel-header"><h3>Faculty Workload Distribution</h3></div>
+                    <div class="panel-body" id="analytics-workload">Loading...</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><h3>Room Utilization Analysis</h3></div>
+                    <div class="panel-body" id="analytics-rooms">Loading...</div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<!-- ═══ MODALS ═══ -->
+
+<!-- Department Modal -->
+<div class="modal-overlay" id="modal-dept">
+    <div class="modal">
+        <h3>Add Department</h3>
+        <form onsubmit="submitDepartment(event)">
+            <div class="form-group"><label>Name</label><input name="name" required placeholder="e.g. Computer Science"></div>
+            <div class="form-group"><label>Code</label><input name="code" required placeholder="e.g. CS"></div>
+            <div class="form-group"><label>Head of Department</label><input name="head" placeholder="e.g. Dr. Smith"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-dept')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Department</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Course Modal -->
+<div class="modal-overlay" id="modal-course">
+    <div class="modal">
+        <h3>Add Course</h3>
+        <form onsubmit="submitCourse(event)">
+            <div class="form-group"><label>Name</label><input name="name" required placeholder="e.g. B.Tech Computer Science"></div>
+            <div class="form-group"><label>Code</label><input name="code" required placeholder="e.g. BTCS"></div>
+            <div class="form-group"><label>Department</label>
+                <select name="department_id" class="dept-select" required></select></div>
+            <div class="form-group"><label>Semester Count</label><input name="semester_count" type="number" value="8" min="1" max="12"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-course')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Course</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Subject Modal -->
+<div class="modal-overlay" id="modal-subject">
+    <div class="modal">
+        <h3>Add Subject</h3>
+        <form onsubmit="submitSubject(event)">
+            <div class="form-group"><label>Name</label><input name="name" required placeholder="e.g. Data Structures"></div>
+            <div class="form-group"><label>Code</label><input name="code" required placeholder="e.g. CS301"></div>
+            <div class="form-group"><label>Semester</label><select name="semester_id" class="semester-id-select" title="Semester" required></select></div>
+            <div class="form-group"><label>Lectures per Week</label><input name="lectures_per_week" type="number" value="3" min="1" max="6" title="Enter number of lectures per week"></div>
+            <div class="form-group"><label><input type="checkbox" name="is_lab"> Is Lab?</label></div>
+            <div class="form-group"><label>Priority (1=highest, 10=lowest)</label><input name="priority" type="number" value="5" min="1" max="10" title="Priority level from 1 (highest) to 10 (lowest)"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-subject')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Subject</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Faculty Modal -->
+<div class="modal-overlay" id="modal-faculty">
+    <div class="modal">
+        <h3>Add Faculty</h3>
+        <form onsubmit="submitFaculty(event)">
+            <div class="form-group"><label>Name</label><input name="name" required placeholder="e.g. Dr. John Smith"></div>
+            <div class="form-group"><label>Email</label><input name="email" type="email" required placeholder="e.g. faculty@institution.edu"></div>
+            <div class="form-group"><label>Department</label><select name="department_id" class="dept-select" title="Select department" required></select></div>
+            <div class="form-group"><label>Designation</label>
+                <select name="designation" title="Faculty designation level">
+                    <option>Professor</option><option>Assoc. Professor</option><option>Asst. Professor</option><option>Lecturer</option>
+                </select>
+            </div>
+            <div class="form-group"><label>Max Hours/Day</label><input name="max_day" type="number" value="6" min="1" max="8" title="Maximum hours per day"></div>
+            <div class="form-group"><label>Max Hours/Week</label><input name="max_week" type="number" value="25" min="5" max="40" title="Maximum hours per week"></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-faculty')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Faculty</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Classroom Modal -->
+<div class="modal-overlay" id="modal-classroom">
+    <div class="modal">
+        <h3>Add Classroom</h3>
+        <form onsubmit="submitClassroom(event)">
+            <div class="form-group"><label>Name</label><input name="name" required placeholder="e.g. LH-301"></div>
+            <div class="form-group"><label>Building</label><input name="building" placeholder="e.g. Main Block"></div>
+            <div class="form-group"><label>Floor</label><input name="floor" type="number" value="0" title="Floor number"></div>
+            <div class="form-group"><label>Capacity</label><input name="capacity" type="number" required min="10" value="60" title="Room capacity in number of students"></div>
+            <div class="form-group"><label>Room Type</label>
+                <select name="room_type" title="Room Type"><option value="lecture">Lecture Hall</option><option value="lab">Laboratory</option><option value="seminar">Seminar Hall</option></select>
+            </div>
+            <div class="form-group"><label><input type="checkbox" name="has_projector" checked> Has Projector</label></div>
+            <div class="form-group"><label><input type="checkbox" name="has_ac"> Has AC</label></div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-classroom')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Classroom</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="/static/JS/app.js"></script>
+<script>
+    let currentSection = 'overview';
+
+    function showSection(evt, name) {
+        evt?.preventDefault();
+        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+        const sec = document.getElementById('sec-' + name);
+        if (sec) sec.style.display = 'block';
+
+        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+        evt?.currentTarget?.classList.add('active');
+
+        currentSection = name;
+        loadSectionData(name);
+        return false;
+    }
+
+    function loadSectionData(name) {
+        switch (name) {
+            case 'overview': loadDashboard(); break;
+            case 'notifications': loadAdminNotifications(); break;
+            case 'departments': loadDepartments(); break;
+            case 'courses': loadCourses(); break;
+            case 'subjects': loadSubjects(); break;
+            case 'faculty-mgmt': loadFaculty(); break;
+            case 'classrooms': loadClassrooms(); break;
+            case 'swap-req': loadSwapRequests(); break;
+            case 'view-tt': populateFilters(); break;
+            case 'analytics': loadDashboard(); break;
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        loadDashboard();
+        populateFilters();
+    });
+</script>
+</body>
+</html>

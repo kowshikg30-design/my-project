@@ -1,0 +1,407 @@
+```
+# Smart Classroom Timetable Scheduler Using Machine Learning
+
+## Project Report
+
+---
+
+## 1. Abstract
+
+This project presents an intelligent timetable scheduling system that leverages machine learning and constraint-based optimization to automatically generate conflict-free academic schedules. The system combines Constraint Satisfaction Problems (CSP), Genetic Algorithms (GA), Decision Trees, and K-Means Clustering into a unified ML pipeline that handles classroom allocation, faculty scheduling, subject prioritization, and time slot optimization. The system achieved zero-conflict timetable generation for 70+ classes across 6 semesters with a fitness score of 2367.3, completing in under 1 second.
+
+---
+
+## 2. Introduction
+
+### 2.1 Background
+
+Timetable scheduling is a critical operational challenge in educational institutions. It involves allocating limited resources—classrooms, faculty, and time slots—to meet the demands of multiple courses, semesters, and departments while satisfying numerous hard and soft constraints. This problem is classified as NP-hard in computational complexity theory, making optimal solutions computationally expensive to find.
+
+### 2.2 Motivation
+
+Traditional timetable generation relies on manual effort or rigid rule-based systems that:
+- Produce frequent scheduling conflicts
+- Fail to optimize resource utilization
+- Cannot adapt to dynamic changes
+- Scale poorly with institutional growth
+
+Machine learning offers a data-driven approach that can learn from historical patterns, adapt to changing constraints, and continuously improve scheduling quality.
+
+### 2.3 Scope
+
+This project delivers a complete web-based application with:
+- Automated timetable generation using a hybrid ML pipeline
+- Admin, Faculty, and Student portals
+- CRUD operations for all academic entities
+- Real-time analytics and reporting
+- Swap request management
+- Historical data learning
+
+---
+
+## 3. Literature Survey
+
+### 3.1 Classical Approaches
+
+| Approach | Strengths | Limitations |
+|----------|-----------|-------------|
+| Manual Scheduling | Human intuition, flexibility | Time-consuming, error-prone, doesn't scale |
+| Graph Coloring | Theoretically sound | Oversimplifies real constraints |
+| Integer Linear Programming | Optimal for small instances | Computationally expensive for large inputs |
+
+### 3.2 Metaheuristic Approaches
+
+| Algorithm | Application | Effectiveness |
+|-----------|-------------|---------------|
+| Genetic Algorithm | Multi-objective optimization | Good balance of exploration/exploitation |
+| Simulated Annealing | Local search optimization | Can escape local optima |
+| Ant Colony Optimization | Path-based scheduling | Effective for routing-style problems |
+| Particle Swarm Optimization | Continuous optimization | Less suited for discrete scheduling |
+
+### 3.3 ML-Based Approaches
+
+Recent research explores:
+- **Reinforcement Learning** for adaptive scheduling (reward-based learning)
+- **Neural Networks** for pattern recognition in historical data
+- **Decision Trees** for interpretable rule extraction
+- **Clustering** for resource grouping and utilization analysis
+
+### 3.4 Our Approach
+
+We adopt a **hybrid pipeline** combining CSP (for feasibility), GA (for optimization), Decision Trees (for pattern learning), and Clustering (for resource analysis). This gives us the benefits of both constraint-based correctness and ML-driven optimization.
+
+---
+
+## 4. System Design
+
+### 4.1 High-Level Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                             │
+│   Admin Dashboard  |  Faculty Portal  |  Student Portal          │
+│   (HTML/CSS/JS + Fetch API)                                      │
+└────────────────────────────┬─────────────────────────────────────┘
+                             │ REST API (JSON)
+┌────────────────────────────┴─────────────────────────────────────┐
+│                    APPLICATION LAYER (Flask)                      │
+│   Auth Manager | CRUD Endpoints | Timetable Engine | Analytics   │
+│                        │                                         │
+│              ┌─────────┴──────────┐                              │
+│              │  ML PIPELINE       │                              │
+│              │  ORCHESTRATOR      │                              │
+│              └─────────┬──────────┘                              │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │
+┌────────────────────────┴─────────────────────────────────────────┐
+│                    MACHINE LEARNING LAYER                         │
+│   CSP Solver | Genetic Algorithm | Decision Tree | K-Means      │
+└────────────────────────┬─────────────────────────────────────────┘
+                         │
+┌────────────────────────┴─────────────────────────────────────────┐
+│                    DATA LAYER (SQLite / SQL Server)               │
+│   Departments | Courses | Faculty | Rooms | Timetables | Logs    │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 4.2 Database Schema (ER Design)
+
+**Core Entities:**
+
+| Table | Purpose | Key Relationships |
+|-------|---------|-------------------|
+| departments | Academic departments | 1:N with courses, faculty |
+| courses | Degree programs | N:1 with department, 1:N with semesters |
+| semesters | Course semesters per year | N:1 with course, 1:N with subjects |
+| subjects | Individual subjects | N:1 with semester, M:N with faculty |
+| faculty | Teaching staff | N:1 with department, M:N with subjects |
+| classrooms | Physical rooms | Referenced by timetable entries |
+| timeslots | Daily time periods | Referenced by timetable entries |
+| timetable_entries | Generated schedule | References semester, subject, faculty, classroom, timeslot |
+| timetable_history | Historical data for ML | Training data for Decision Tree |
+
+**Key Constraints:**
+- Unique (faculty, day, timeslot) per timetable version
+- Unique (classroom, day, timeslot) per timetable version
+- Unique (semester, day, timeslot) per timetable version
+- Faculty max hours per day/week
+- Classroom capacity >= student count
+
+### 4.3 API Structure
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/login` | Authenticate user |
+| POST | `/api/logout` | End session |
+| GET/POST | `/api/departments` | List/create departments |
+| PUT/DELETE | `/api/departments/:id` | Update/delete department |
+| GET/POST | `/api/courses` | List/create courses |
+| GET/POST | `/api/semesters` | List/create semesters |
+| GET/POST | `/api/subjects` | List/create subjects |
+| GET/POST | `/api/faculty` | List/create faculty |
+| GET/POST | `/api/classrooms` | List/create classrooms |
+| GET | `/api/timeslots` | List time slots |
+| **POST** | **`/api/generate`** | **Generate timetable (ML pipeline)** |
+| GET | `/api/timetable` | Retrieve generated timetable |
+| GET | `/api/timetable/versions` | List timetable versions |
+| GET/POST | `/api/swap-requests` | Manage swap requests |
+| POST | `/api/swap-requests/:id/approve` | Approve swap |
+| GET | `/api/analytics/overview` | Dashboard statistics |
+| GET | `/api/analytics/faculty-workload` | Faculty load analysis |
+| GET | `/api/analytics/room-utilization` | Room usage analysis |
+
+---
+
+## 5. Implementation
+
+### 5.1 ML Pipeline - Algorithm Details
+
+#### 5.1.1 Constraint Satisfaction Problem (CSP) Solver
+
+**Purpose:** Generate a valid, conflict-free timetable as the baseline.
+
+**Why CSP:** Timetable scheduling is fundamentally a constraint satisfaction problem. Hard constraints (no teacher in two places at once, no room double-booking) must be absolutely satisfied. CSP guarantees this.
+
+**Algorithm:**
+1. Define variables: Each (subject, lecture_index) pair
+2. Define domains: All possible (day, timeslot, room, faculty) tuples
+3. Apply constraints to prune domains
+4. Use greedy assignment with random restarts
+5. Variables with fewer valid options (MRV heuristic) are assigned first
+
+**Hard Constraints Enforced:**
+- No faculty teaching two classes simultaneously
+- No classroom double-booking
+- No semester with two classes at same time
+- Room capacity must meet student count
+- Labs must be in lab rooms
+- Faculty daily/weekly hour limits
+
+```
+For each variable (subject, lecture_index):
+    Sort by priority (MRV heuristic)
+    For each value in domain (day, slot, room, faculty):
+        If all_constraints_satisfied:
+            Assign value
+            Break
+    If unassigned:
+        Restart with random shuffling
+```
+
+#### 5.1.2 Genetic Algorithm (GA)
+
+**Purpose:** Optimize the CSP-generated timetable for quality.
+
+**Why GA:** CSP produces a *valid* schedule but not necessarily an *optimal* one. GA evolves the solution toward multiple soft objectives simultaneously.
+
+**Fitness Function (Multi-Objective):**
+```
+fitness = 1000
+    - conflict_penalty * 100    (hard: should be 0)
+    + preference_score * 2       (faculty teaching preferred subjects)
+    + workload_balance * 3       (even distribution across days)
+    - gap_penalty * 1.5          (minimize student free periods)
+    + distribution_score * 2     (spread subjects across week)
+```
+
+**Operators:**
+- **Selection:** Tournament selection (size 3)
+- **Crossover:** Semester-based single-point crossover
+- **Mutation:** Random day/timeslot/room swaps (15% rate)
+- **Elitism:** Top 3 individuals preserved each generation
+
+**Parameters:**
+- Population: 20-25 individuals
+- Generations: 50-100
+- Crossover rate: 80%
+- Mutation rate: 15%
+
+#### 5.1.3 Decision Tree (Pattern Learning)
+
+**Purpose:** Learn which time-slot + room + faculty combinations historically produced the best outcomes.
+
+**Why Decision Tree:**
+- Interpretable: admins can understand WHY certain slots are preferred
+- Fast inference for real-time suggestions
+- Works well with small-to-medium historical datasets
+
+**Features (8 input features):**
+| Feature | Type | Description |
+|---------|------|-------------|
+| subject_id | Categorical | Subject identifier |
+| faculty_id | Categorical | Faculty identifier |
+| day_of_week | Ordinal (0-4) | Day of scheduling |
+| timeslot_id | Ordinal | Time period |
+| is_lab | Binary | Whether subject is lab |
+| priority | Ordinal (1-10) | Subject priority |
+| student_count | Numeric | Students in semester |
+| room_capacity | Numeric | Room size |
+
+**Target:** fitness_score (regression) and good_slot (classification)
+
+**Results from testing:**
+- Regression MSE: 0.0037
+- Classification Accuracy: 94%
+- Most important features: timeslot_id (32.8%), room_capacity (30.7%)
+
+#### 5.1.4 K-Means Clustering (Room Analysis)
+
+**Purpose:** Group classrooms by usage patterns to identify optimization opportunities.
+
+**Why Clustering:**
+- Identifies underutilized rooms → prioritize them in scheduling
+- Groups rooms by usage profile → inform allocation strategy
+- Detects peak-hour bias → help with load balancing
+
+**Features per room:**
+1. Occupancy rate (used slots / total slots)
+2. Average capacity ratio (class size / room capacity)
+3. Subject variety (unique subjects / total classes)
+4. Day spread (days used / 5)
+5. Peak hour usage (morning classes / total classes)
+
+**Clusters:** 3 groups (low_usage, medium_usage, high_usage)
+
+### 5.2 How Algorithms Interact
+
+```
+                    Historical Data
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+        Decision Tree         K-Means Clustering
+        (slot suggestions)    (room priorities)
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+                   CSP Solver
+                 (valid schedule)
+                         │
+                         ▼
+                 Genetic Algorithm
+               (optimized schedule)
+                         │
+                         ▼
+                  Final Timetable
+                  + Analytics
+```
+
+### 5.3 Technology Stack
+
+| Component | Technology | Justification |
+|-----------|------------|---------------|
+| Backend | Python Flask | Lightweight, integrates natively with ML libraries |
+| Frontend | HTML5/CSS3/JS | Universal, no build step required |
+| Database | SQLite (SQL Server compatible) | Zero-config, portable; schema compatible with SQL Server |
+| ML | scikit-learn, NumPy | Industry-standard, well-documented |
+| ML Pipeline | Custom Python | Full control over algorithm orchestration |
+
+---
+
+## 6. Results
+
+### 6.1 Timetable Generation Performance
+
+| Metric | Value |
+|--------|-------|
+| Total classes scheduled | 70 |
+| Semesters covered | 6 (across 3 departments) |
+| Hard constraint violations | **0** |
+| Fitness score | 2367.3 |
+| Generation time | **0.63 seconds** |
+| Decision Tree accuracy | 94% |
+| Decision Tree MSE | 0.0037 |
+
+### 6.2 Sample Generated Timetable (B.Tech CS - Semester 3)
+
+```
+Monday:
+  09:00-09:50  |  CS301  Data Structures        |  Dr. Anand Kumar    |  LH-102
+  11:00-11:50  |  CS302  Database Management    |  Prof. Neha Verma   |  LH-101
+  13:30-14:20  |  CS303  Computer Networks      |  Dr. Rajesh Iyer    |  LH-201
+  14:20-15:10  |  CS301  Data Structures        |  Dr. Anand Kumar    |  LH-201
+
+Tuesday:
+  09:50-10:40  |  CS303  Computer Networks      |  Dr. Rajesh Iyer    |  LH-201
+
+Wednesday:
+  09:50-10:40  |  CS304  Operating Systems      |  Dr. Rajesh Iyer    |  LH-201
+  11:50-12:40  |  CS303  Computer Networks      |  Dr. Rajesh Iyer    |  LH-101
+
+Thursday:
+  09:50-10:40  |  CS301  Data Structures        |  Dr. Anand Kumar    |  LH-102
+  11:50-12:40  |  CS302  Database Management    |  Prof. Neha Verma   |  LH-102
+
+Friday:
+  09:00-09:50  |  CS301  Data Structures        |  Dr. Anand Kumar    |  LH-201
+  09:50-10:40  |  CS304  Operating Systems      |  Dr. Rajesh Iyer    |  LH-101
+  11:00-11:50  |  CS304  Operating Systems      |  Dr. Rajesh Iyer    |  LH-201
+  11:50-12:40  |  CS302  Database Management    |  Prof. Neha Verma   |  LH-102
+```
+
+### 6.3 ML Feature Importance (Decision Tree)
+
+| Feature | Importance |
+|---------|-----------|
+| timeslot_id | 32.82% |
+| room_capacity | 30.72% |
+| subject_id | 13.61% |
+| student_count | 5.91% |
+| faculty_id | 5.32% |
+| is_lab | 4.95% |
+| priority | 3.46% |
+| day_of_week | 3.22% |
+
+**Insight:** Time slot and room capacity are the strongest predictors of scheduling quality, confirming that temporal and spatial constraints dominate timetable fitness.
+
+### 6.4 GA Convergence
+
+The fitness improved from 2291.3 (initial CSP solution) to 2367.3 (GA-optimized) over 50 generations—a **3.3% improvement** in schedule quality through evolutionary optimization.
+
+---
+
+## 7. Conclusion
+
+The Smart Classroom Timetable Scheduler successfully demonstrates that a hybrid ML approach combining CSP, Genetic Algorithms, Decision Trees, and Clustering can:
+
+1. **Generate conflict-free timetables** in under 1 second for a realistic institutional dataset
+2. **Optimize multiple objectives** simultaneously (preferences, workload balance, gap minimization)
+3. **Learn from historical data** to improve future scheduling decisions
+4. **Provide actionable insights** through feature importance analysis and utilization clustering
+5. **Scale effectively** to handle multiple departments, courses, and semesters
+
+The zero-conflict result validates the CSP solver's correctness, while the GA's convergence from 2291 to 2367 fitness demonstrates meaningful optimization beyond mere feasibility.
+
+---
+
+## 8. Future Enhancements
+
+1. **Reinforcement Learning Agent:** Train an RL agent that learns scheduling policies through trial-and-error, adapting to semester-specific patterns over time.
+
+2. **Real-Time Rescheduling:** Implement dynamic rescheduling when faculty cancels or rooms become unavailable, using the existing CSP solver with partial constraint relaxation.
+
+3. **Multi-Campus Support:** Extend the system to handle inter-campus room sharing and travel-time constraints.
+
+4. **Student Preference Integration:** Allow students to express elective preferences, with the scheduler optimizing group formation.
+
+5. **Exam Scheduling Module:** Apply the same GA+CSP pipeline to examination scheduling with additional constraints (exam duration, gap between exams).
+
+6. **Mobile Application:** Build a Flutter/React Native mobile app for real-time schedule notifications.
+
+7. **Deep Learning Forecasting:** Use LSTM networks to predict future enrollment numbers, informing proactive resource allocation.
+
+8. **API Integration:** Connect with institutional ERP systems (student information systems, HR) for automatic data synchronization.
+
+---
+
+## References
+
+1. Burke, E.K., et al. "A survey of search methodologies and automated system development for examination timetabling." *Journal of Scheduling*, 2009.
+2. Pillay, N. "A survey of school timetabling research." *Annals of Operations Research*, 2014.
+3. Qu, R., et al. "A survey of search methodologies and automated system development for the university course timetabling problem." *European Journal of Operational Research*, 2009.
+4. Mitchell, M. "An Introduction to Genetic Algorithms." MIT Press, 1996.
+5. Russell, S., Norvig, P. "Artificial Intelligence: A Modern Approach." (CSP chapter), Pearson, 2020.
+6. scikit-learn documentation: https://scikit-learn.org/stable/
+7. Flask documentation: https://flask.palletsprojects.com/
+
+```

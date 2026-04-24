@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty View - Smart Timetable Scheduler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/CSS/style.css">
+</head>
+<body class="dark-portal faculty-portal-page">
+<div class="app-layout">
+    <aside class="sidebar">
+        <div class="sidebar-brand">
+            <h2>Scheduler</h2>
+            <span>Faculty Portal</span>
+        </div>
+        <ul class="sidebar-nav">
+            <li><a href="#" class="active" onclick="return showFacultySection(event, 'schedule')"><span class="icon">&#128197;</span> My Schedule</a></li>
+            <li><a href="#" onclick="return showFacultySection(event, 'attendance')"><span class="icon">&#9989;</span> Attendance</a></li>
+            <li><a href="#" onclick="return showFacultySection(event, 'swap')"><span class="icon">&#128260;</span> Swap Requests</a></li>
+            <li><a href="#" onclick="return showFacultySection(event, 'preferences')"><span class="icon">&#9881;</span> Preferences</a></li>
+        </ul>
+        <div style="padding:1.5rem; margin-top:auto; border-top:1px solid rgba(255,255,255,0.08);">
+            <button class="btn btn-secondary btn-full btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div id="faculty-alert"></div>
+
+        <!-- My Schedule -->
+        <section id="fac-schedule" class="section">
+            <div class="top-bar">
+                <h1>My Schedule</h1>
+                <div class="top-bar-actions">
+                    <div class="user-badge">Faculty View</div>
+                    <button id="faculty-status-btn" class="btn btn-success btn-sm" type="button" disabled>Status: Active</button>
+                </div>
+            </div>
+            <div class="panel">
+                <div class="panel-header">
+                    <h3>Weekly Timetable</h3>
+                    <div>
+                        <label for="fac-filter">Select Faculty:</label>
+                        <select id="fac-filter" class="faculty-select" onchange="loadMySchedule()"></select>
+                    </div>
+                </div>
+                <div class="panel-body" id="fac-timetable">
+                    <div class="empty-state">
+                        <div class="icon">&#128197;</div>
+                        <p>Select your name to view your schedule.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Attendance -->
+        <section id="fac-attendance" class="section attendance-section" style="display:none;">
+            <div class="top-bar">
+                <div>
+                    <div class="attendance-kicker">Teaching Pulse</div>
+                    <h1>Student Attendance</h1>
+                    <p class="attendance-subtitle">Mark attendance faster with clearer actions, animated stats, and a better-structured daily roster.</p>
+                </div>
+                <div class="top-bar-actions attendance-toolbar">
+                    <div class="form-group" style="margin:0;">
+                        <label for="attendance-date">Date</label>
+                        <input type="date" id="attendance-date" title="Attendance Date" onchange="loadAttendanceForSelectedDate()">
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadAttendanceForSelectedDate()">Refresh</button>
+                    <button class="btn btn-success btn-sm" onclick="markAllAttendance('present')">&#10004; All Present</button>
+                    <button class="btn btn-danger btn-sm" onclick="markAllAttendance('absent')">&#10008; All Absent</button>
+                </div>
+            </div>
+
+            <div class="attendance-hero">
+                <div class="attendance-hero-copy">
+                    <span class="attendance-hero-pill">Attendance Studio</span>
+                    <h3>Mark present and absent with less friction.</h3>
+                    <p>The sheet is now easier to scan, and the action controls stay visually connected to each student row.</p>
+                </div>
+                <div class="attendance-hero-orb" aria-hidden="true">
+                    <div class="attendance-orb-card">
+                        <span>Faculty View</span>
+                        <strong>Mark in seconds</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="stats-grid attendance-stats attendance-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">&#128101;</div>
+                    <div class="stat-value" id="attendance-total">0</div>
+                    <div class="stat-label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon green">&#9989;</div>
+                    <div class="stat-value" id="attendance-present">0</div>
+                    <div class="stat-label">Present</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon orange">&#10060;</div>
+                    <div class="stat-value" id="attendance-absent">0</div>
+                    <div class="stat-label">Absent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon cyan">&#128200;</div>
+                    <div class="stat-value" id="attendance-rate">0%</div>
+                    <div class="stat-label">Attendance Rate</div>
+                </div>
+            </div>
+
+            <div class="panel attendance-panel attendance-sheet-panel">
+                <div class="panel-header"><h3>Daily Attendance Sheet</h3></div>
+                <div class="panel-body">
+                    <table class="data-table attendance-table attendance-sheet-table">
+                        <thead>
+                            <tr>
+                                <th>S.No.</th>
+                                <th>Student Name</th>
+                                <th>Registration Number</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                                <th>Mark Attendance</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendance-body">
+                            <tr><td colspan="6" class="text-center text-muted">Loading attendance...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Swap Requests -->
+        <section id="fac-swap" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>Swap Requests</h1>
+            </div>
+            <div class="panel">
+                <div class="panel-header"><h3>Request a Swap</h3></div>
+                <div class="panel-body">
+                    <form onsubmit="submitSwapRequest(event)">
+                        <div class="form-group">
+                            <label>Your Scheduled Class</label>
+                            <select id="swap-entry" name="entry_id" required>
+                                <option value="">Select a class</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Requested Day</label>
+                            <select id="swap-day" name="requested_day" required>
+                                <option value="">Select day</option>
+                                <option value="0">Monday</option>
+                                <option value="1">Tuesday</option>
+                                <option value="2">Wednesday</option>
+                                <option value="3">Thursday</option>
+                                <option value="4">Friday</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Requested Time Slot</label>
+                            <select id="swap-timeslot" name="requested_timeslot_id" required>
+                                <option value="">Select time slot</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Reason</label>
+                            <textarea id="swap-reason" name="reason" rows="3" placeholder="Why do you need this swap?" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Swap Request</button>
+                    </form>
+                </div>
+            </div>
+            <div class="alert alert-info">
+                Submit a swap request here. Admin can then approve or reject it.
+            </div>
+            <div class="panel">
+                <div class="panel-header"><h3>My Swap Requests</h3></div>
+                <div class="panel-body">
+                    <table class="data-table">
+                        <thead><tr><th>Subject</th><th>Requested Change</th><th>Reason</th><th>Status</th></tr></thead>
+                        <tbody id="fac-swap-body"><tr><td colspan="3" class="text-center text-muted">No swap requests</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Preferences -->
+        <section id="fac-preferences" class="section" style="display:none;">
+            <div class="top-bar">
+                <h1>My Preferences</h1>
+            </div>
+            <div class="panel">
+                <div class="panel-header"><h3>Teaching Preferences</h3></div>
+                <div class="panel-body">
+                    <p class="text-muted mb-2">Your subject preferences are considered during timetable generation.</p>
+                    <table class="data-table">
+                        <thead><tr><th>Subject</th><th>Code</th><th>Preference Score</th></tr></thead>
+                        <tbody id="fac-pref-body"><tr><td colspan="3" class="text-center text-muted">Loading...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="/static/JS/app.js"></script>
+<script>
+    const CURRENT_USER = {{ current_user|tojson }};
+    let FACULTY_TIMETABLE_ENTRIES = [];
+    const ACTIVE_FACULTY_ID = CURRENT_USER?.linked_id || null;
+
+    function showFacultySection(evt, name) {
+        evt?.preventDefault();
+        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+        document.getElementById('fac-' + name).style.display = 'block';
+        document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+        evt?.currentTarget?.classList.add('active');
+        if (name === 'attendance') initAttendanceSection();
+        if (name === 'swap') loadFacultySwapRequests();
+        if (name === 'preferences') loadFacultyPrefs();
+        return false;
+    }
+
+    async function loadMySchedule() {
+        const facId = ACTIVE_FACULTY_ID || document.getElementById('fac-filter')?.value;
+        if (!facId) return;
+        const { entries, timeslots } = await loadTimetable(null, facId);
+        FACULTY_TIMETABLE_ENTRIES = entries;
+        renderTimetableGrid('fac-timetable', entries, timeslots);
+        populateSwapEntryOptions(entries);
+        loadFacultyPrefs();
+        loadFacultySwapRequests();
+        loadFacultyAccountStatus();
+    }
+
+    async function loadFacultyAccountStatus() {
+        const btn = document.getElementById('faculty-status-btn');
+        if (!btn) return;
+
+        const data = await API.get('/api/faculty');
+        if (!Array.isArray(data) || data.length === 0) {
+            btn.className = 'btn btn-secondary btn-sm';
+            btn.textContent = 'Status: Unknown';
+            return;
+        }
+
+        const facultyRow = ACTIVE_FACULTY_ID
+            ? data.find(f => Number(f.id) === Number(ACTIVE_FACULTY_ID)) || data[0]
+            : data[0];
+        const isActive = Number(facultyRow.is_active ?? 1) === 1;
+
+        btn.className = `btn ${isActive ? 'btn-success' : 'btn-danger'} btn-sm`;
+        btn.textContent = `Status: ${isActive ? 'Active' : 'No'}`;
+    }
+
+    async function loadFacultyPrefs() {
+        const data = await API.get('/api/faculty-subjects');
+        const tbody = document.getElementById('fac-pref-body');
+        if (!tbody || !Array.isArray(data)) return;
+        const filtered = ACTIVE_FACULTY_ID
+            ? data.filter(fs => fs.faculty_id === ACTIVE_FACULTY_ID)
+            : data;
+        tbody.innerHTML = filtered.map(fs => `<tr>
+            <td>${fs.subject_name}</td>
+            <td>${fs.subject_code}</td>
+            <td>${'&#11088;'.repeat(Math.min(fs.preference_score, 10))} (${fs.preference_score}/10)</td>
+        </tr>`).join('') || '<tr><td colspan="3" class="text-center text-muted">No preferences set</td></tr>';
+    }
+
+    async function loadFacultySwapRequests() {
+        const data = await API.get('/api/swap-requests');
+        const tbody = document.getElementById('fac-swap-body');
+        if (!tbody || !Array.isArray(data)) return;
+        const filtered = ACTIVE_FACULTY_ID
+            ? data.filter(req => req.faculty_id === ACTIVE_FACULTY_ID)
+            : data;
+        tbody.innerHTML = filtered.map(req => `<tr>
+            <td>${req.subject_name}</td>
+            <td>${formatRequestedChange(req)}</td>
+            <td>${req.reason || '-'}</td>
+            <td><span class="badge badge-${req.status === 'approved' ? 'success' : req.status === 'rejected' ? 'danger' : 'warning'}">${req.status}</span></td>
+        </tr>`).join('') || '<tr><td colspan="4" class="text-center text-muted">No swap requests</td></tr>';
+    }
+
+    function populateSwapEntryOptions(entries) {
+        const select = document.getElementById('swap-entry');
+        if (!select) return;
+        const items = Array.isArray(entries) ? entries : [];
+        select.innerHTML = '<option value="">Select a class</option>' + items.map(entry => `
+            <option value="${entry.id}">
+                ${entry.subject_code} - ${dayName(entry.day_of_week)} ${entry.start_time}-${entry.end_time} (${entry.classroom_name})
+            </option>
+        `).join('');
+    }
+
+    async function populateSwapTimeslots() {
+        const data = await API.get('/api/timeslots');
+        const select = document.getElementById('swap-timeslot');
+        if (!select || !Array.isArray(data)) return;
+        const slots = data.filter(slot => !slot.is_break);
+        select.innerHTML = '<option value="">Select time slot</option>' + slots.map(slot => `
+            <option value="${slot.id}">${slot.start_time} - ${slot.end_time} (${slot.label})</option>
+        `).join('');
+    }
+
+    async function submitSwapRequest(event) {
+        event.preventDefault();
+        const form = event.target;
+        if (!ACTIVE_FACULTY_ID) {
+            showAlert('faculty-alert', 'Please select a faculty first.', 'danger');
+            return;
+        }
+        const result = await API.post('/api/swap-requests', {
+            faculty_id: ACTIVE_FACULTY_ID,
+            entry_id: parseInt(form.entry_id.value, 10),
+            requested_day: parseInt(form.requested_day.value, 10),
+            requested_timeslot_id: parseInt(form.requested_timeslot_id.value, 10),
+            reason: form.reason.value.trim(),
+        });
+
+        if (result?.error) {
+            showAlert('faculty-alert', result.error, 'danger');
+            return;
+        }
+
+        form.reset();
+        showAlert('faculty-alert', 'Swap request submitted successfully.', 'success');
+        loadFacultySwapRequests();
+    }
+
+    function dayName(dayIndex) {
+        return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][dayIndex] || 'Unknown';
+    }
+
+    function formatRequestedChange(req) {
+        const day = req.requested_day != null ? dayName(req.requested_day) : 'Same day';
+        return `${day}${req.requested_timeslot_id ? ` / Slot ${req.requested_timeslot_id}` : ''}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await populateFilters();
+        await populateSwapTimeslots();
+        await loadFacultyAccountStatus();
+        const select = document.getElementById('fac-filter');
+        if (select) {
+            if (ACTIVE_FACULTY_ID) select.value = String(ACTIVE_FACULTY_ID);
+            select.disabled = true;
+            loadMySchedule();
+        }
+    });
+</script>
+</body>
+</html>
